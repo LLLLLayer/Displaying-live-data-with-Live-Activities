@@ -1,20 +1,18 @@
 # 实时活动(Live Activity) - 在锁定屏幕和灵动岛上显示应用程序的实时数据
 
-> 本文参考、翻译并实现 [Apple‘s documentation activitykit displaying live data with live activities](https://developer.apple.com/news/?id=ttuz9vwq) 内容，文章的项目代码可以从[这里](https://github.com/LLLLLayer/Displaying-live-data-with-Live-Activities)获取。
+> 本文参考、翻译并实现 [Apple‘s documentation activitykit displaying live data with live activities](https://developer.apple.com/news/?id=ttuz9vwq) 内容，文章涉及的项目代码可以从[这里](https://github.com/LLLLLayer/Displaying-live-data-with-Live-Activities)获取。
 
 ## 概述
 
 **实时活动(Live Activity)** 在 iPhone 锁定屏幕和灵动岛中显示 App 的实时数据，能帮助用户跟踪 App 的内容。
 
-要提供 Live Activity，开发者需要将代码添加到新的或现有的小组件中。Live Activity 使用了 [WidgetKit](https://developer.apple.com/documentation/WidgetKit) 的功能，并使用 [SwiftUI](https://developer.apple.com/documentation/SwiftUI) 编写界面。而 [ActivityKit](https://developer.apple.com/documentation/activitykit) 的作用是处理 Live Activity 的生命周期：开发者使用它的 API 来进行请求、更新和结束实时活动。
+要提供 Live Activity，开发者需要将代码添加到新的或现有的小组件中。Live Activity 使用了 [WidgetKit](https://developer.apple.com/documentation/WidgetKit) 的功能，并使用 [SwiftUI](https://developer.apple.com/documentation/SwiftUI) 编写界面。而 [ActivityKit](https://developer.apple.com/documentation/activitykit) 的作用是处理 Live Activity 的<span data-word-id="36379614" class="abbreviate-word">生命周期</span>：开发者使用它的 API 来进行请求、更新和结束实时活动。
 
 > 实时活动功能和 ActivityKit 将包含在今年晚些时候推出的 iOS 16.1 中。
 
+
 ## 实时活动要求或限制
-
-- **时间**
-
-除非用户或者 App 主动结束实时活动，否则其最多可以处于活动状态八小时。超过此限制后，系统会将其结束。当实时活动结束时，系统会立即将其从灵动岛中移除。但此时，实时活动还会一直保留在锁定屏幕上，直到用户主动将其移除，或交由系统在四小时后将其移除。**即实时活动会灵动上岛最多保留八小时，在锁定屏幕上最多保留十二小时**。
+时活动还会一直保留在锁定屏幕上，直到用户主动将其移除，或交由系统在四小时后将其移除。**即实时活动会灵动上岛最多保留八小时，在锁定屏幕上最多保留十二小时**。
 
 - **更新**
 
@@ -28,8 +26,6 @@
 
 为确保系统可以在每个位置显示 App 的实时活动，开发者必须**支持所有视图**。
 
-
-
 ## 为 App 添加对实时活动的支持
 
 描述实时活动界面的代码是 App 的小组件的一部分。如果开发者已经在 App 中提供小组件，则可以将实时活动的界面代码添加到现有的小组件中，并且可以在小组件和实时活动之间重用部分代码。但尽管实时活动利用了 WidgetKit 的功能，但它们**并不是小组件**。与更新小组件界面的 timeline 机制相比，开发者只能使用 ActivityKit 或远程推送通知来更新实时活动。
@@ -38,29 +34,24 @@
 
 本文将参考 Apple 的开发文档，实现实时活动。
 
-
-
 ### 创建项目并为 App 添加对实时活动的支持
 
 创建项目 `LiveActivities` 并为项目添加新 Target，选择 `Widget Extension`:
 
-| ![image-20220916214530113](./Live Activities.assets/image-20220916214530113.png) | ![image-20220916215239411](./Live Activities.assets/image-20220916215239411.png) | ![image-20220916215036844](./Live Activities.assets/image-20220916215036844.png) |
+| ![image-20220916214530113.png](http://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/74e30b724b4640deb737cd6ffdd8aaa6~tplv-k3u1fbpfcp-watermark.image?) | ![image-20220916215239411.png](http://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/bea78ba27cef4de5b822e7ceedb1ea31~tplv-k3u1fbpfcp-watermark.image?) | ![image-20220916215036844.png](http://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/f4b7c5c2630b4e549e53b8761d1c98fd~tplv-k3u1fbpfcp-watermark.image?) |
 | :----------------------------------------------------------: | ------------------------------------------------------------ | ------------------------------------------------------------ |
-
-
 
 可以将其命名 `LiveActivitiesWidget`，暂时不需要勾选 `Include Configuration Intent`，单击 Finsih 并同意 Activate scheme 对话框：
 
-| ![image-20220916215416018](./Live Activities.assets/image-20220916215416018.png) | ![image-20220916215448651](./Live Activities.assets/image-20220916215448651.png) |
+
+
+
+| ![image-20220916215416018.png](http://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/600b0dfda87a49bc86884fb68fb274a4~tplv-k3u1fbpfcp-watermark.image?) | ![image-20220916215448651.png](http://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a0725bbdc74b43bcb9695f5fc583afa5~tplv-k3u1fbpfcp-watermark.image?) |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
-
-
 
 在 `info.plist` 添加 `NSSupportsLiveActivities ` key，并设置为`YES`：
 
-![image-20220916220349762](./Live Activities.assets/image-20220916220349762.png)
-
-
+![image-20220916220349762.png](http://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/4f5457a8eb304a8aa8fb8e3ed0e5eff7~tplv-k3u1fbpfcp-watermark.image?)
 
 ### 定义实时活动的静态和动态数据
 
@@ -98,13 +89,11 @@ struct PizzaDeliveryAttributes: ActivityAttributes {
 }
 ```
 
-在上面的示例中，`PizzaDeliveryAttributes` 描述了以下静态数据：订购的比萨饼数量、客户需要支付的金额以及订单号。 
+在上面的示例中，`PizzaDeliveryAttributes` 描述了以下静态数据：订购的比萨饼数量、客户需要支付的金额以及订单号。
 
-注意代码是如何定义 `Activity.ContentState `来封装动态数据的：送披萨的司机的名字和预计送达时间。 
+注意代码是如何定义 `Activity.ContentState `来封装动态数据的：送披萨的司机的名字和预计送达时间。
 
 此外，该示例定义了类型别名 `PizzaDeliveryStatus` 以使代码更具描述性和易于阅读。
-
-
 
 ### 创建实时活动配置
 
@@ -130,8 +119,6 @@ struct LiveActivitiesWidget: Widget {
 }
 ```
 
-
-
 假如我们的 App 已经提供了小组件，请将实时活动添加到 `WidgetBundle` 里。 如果没有 `WidgetBundle`，例如 App 当前只提供一个小组件，请按照[创建 Widget Extension](https://developer.apple.com/documentation/WidgetKit/Creating-a-Widget-Extension) 中的描述创建一个 `WidgetBundle`，然后将实时活动添加到其中，例如：
 
 ```swift
@@ -146,8 +133,6 @@ struct LiveActivitiesWidgets: WidgetBundle {
     }
 }
 ```
-
-
 
 ### 创建锁定屏幕视图
 
@@ -199,8 +184,6 @@ struct LockScreenLiveActivityView: View {
 
 > 这里需要注意，如果其高度超过 160，系统可能会截断锁定屏幕上的实时活动。
 
-
-
 ### 创建紧凑和最小的视图
 
 在支持实时活动的设备的灵动岛上，当 App 开始一个实时活动并且它是唯一一个活跃的实时活动时，紧凑前视图和尾视图一起出现，在灵动岛中形成一个有凝聚力的视图。当多个实时活动处于活动状态时(无论是来自我们的 App 还是来自多个 App)，系统会选择哪些实时活动可见，并显示两个最小视图：一个最小视图显示附加到灵动岛，而另一个显示为分离的样式。
@@ -251,8 +234,6 @@ struct LiveActivitiesWidget: Widget {
     }
 }
 ```
-
-
 
 ### 创建扩展视图
 
@@ -322,8 +303,6 @@ struct PizzaDeliveryWidget: Widget {
 
 > 这里也需要注意，如果灵动岛的高度超过 160，系统可能会截断灵动岛中的实时活动。
 
-
-
 为了呈现展开的实时活动中出现的视图，系统将展开的视图划分为不同的区域。请注意上述示例如何返回一个指定多个 `DynamicIslandExpandedRegion` 对象的灵动岛。传递以下 `DynamicIslandExpandedRegionPosition` 值以在展开视图中的指定位置布置内容：
 
 - **center** 将内容置于 TrueDepth 摄像头下方。
@@ -334,30 +313,27 @@ struct PizzaDeliveryWidget: Widget {
 
 - **bottom** 将内容置于 leading、trailing 和 center 之下。
 
-![image-20220917033045844](./Live Activities.assets/image-20220917033045844.png)
 
-
+![image-20220917033045844.png](http://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/706baa22c19440b2a1145a86511d3080~tplv-k3u1fbpfcp-watermark.image?)
 
 为了呈现展开的实时活动中出现的内容，系统首先确定 center 内容的宽度，同时考虑 leading 和 trailing 内容的最小宽度。 然后系统根据其垂直位置放置 leading 和 trailing 内容并确定其大小。默认情况下， leading 和 trailing 接相等水平空间。
 
-![image-20220917033103851](./Live Activities.assets/image-20220917033103851.png)
+![image-20220917033103851.png](http://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/515cfa954d724262850237299c8c7a5c~tplv-k3u1fbpfcp-watermark.image?)
 
 我们可以通过将优先级传递给 [`init(_:priority:content:)`](https://developer.apple.com/documentation/WidgetKit/DynamicIslandExpandedRegion/init(_:priority:content:)) 初始化程序来告诉系统优先考虑 `DynamicIslandExpandedRegion` 视图之一。 系统以灵动岛的全宽呈现具有最高优先级的视图。
 
 > 如果内容太宽而无法出现在 TrueDepth 相机旁边的 leading 位置，请使用 [belowIfTooWide](https://developer.apple.com/documentation/WidgetKit/DynamicIslandExpandedRegionVerticalPlacement/belowIfTooWide) 修饰符来渲染 TrueDepth 相机下方的 leading 内容。
 
-
-
 ### 使用自定义颜色
+
 默认情况下，系统使用默认的文本色和最适合用户锁定屏幕的实时活动的背景颜色。如果要设置自定义色调颜色，请使用 [`activityBackgroundTint(_:)`](https://developer.apple.com/documentation/SwiftUI/View/activityBackgroundTint(_:)) 视图修饰符。此外，使用 [`activitySystemActionForegroundColor(_:)`](https://developer.apple.com/documentation/SwiftUI/View/activitySystemActionForegroundColor(_:)) 视图修饰符来定义系统在锁定屏幕上实时活动旁边显示的辅助操作按钮的文本颜色。
 
-要设置自定义的半透明背景色，请使用  [`opacity(_:)`](https://developer.apple.com/documentation/SwiftUI/Color/opacity(_:))  视图修饰符或指定一个不透明背景颜色。
+要设置自定义的半透明背景色，请使用 [`opacity(_:)`](https://developer.apple.com/documentation/SwiftUI/Color/opacity(_:)) 视图修饰符或指定一个不透明背景颜色。
 
 > 在 Always-On Retina 显示屏的设备上，系统会调暗屏幕以延长电池寿命，并在锁定屏幕上呈现实时活动，就像在暗模式下一样。 使用 SwiftUI 的 `isLuminanceReduced` 环境值来检测 Always On 并使用在 Always On 中看起来很棒的图像。
 
-
-
 ### 确保实时活动可用
+
 实时活动仅在 iPhone 上可用。如果我们的 App 可在多个平台上使用并提供小组件，请确保实时活动在运行时可用。此外，用户可以在“设置”应用中选择停用应用的实时活动。
 
 要查看实时活动是否可用以及用户是否允许我们的 App 使用实时活动：
@@ -368,9 +344,8 @@ struct PizzaDeliveryWidget: Widget {
 
 > 一个应用可以启动多个实时活动，而一个设备可以运行多个 App 的实时活动。除了确保实时活动可用之外，在开始、更新或结束实时活动时请注意处理可能出现的错误。例如，启动实时活动可能会失败，因为用户的设备可能已达到其运行实时活动的限制。
 
-
-
 ### 开始实时活动
+
 当应用程序在前台时，我们可以在应用程序代码中使用 [`request(attributes:contentState:pushType:)`](https://developer.apple.com/documentation/activitykit/activity/request(attributes:contentstate:pushtype:)) 函数启动实时活动。它将开发者创建的 `attributes` 和 `contentState` 作为参数来提供显示在实时活动中的初始值，并告诉系统哪些数据是动态的。如果我们使用远程推送通知来更新实时活动，还需要提供 `pushType` 参数。
 
 更新 LiveActivities 中的 `ContentView.swift` 以下代码示例从前面的示例中为披萨外卖启动了一个新的实时活动：
@@ -408,15 +383,12 @@ struct ContentView: View {
 
 > 我们只能在应用程序处于前台时从 App 启动实时活动。 但是我们可以在 App 在后台运行时更新或结束实时活动，例如通过使用后台任务。
 
-![iShot_2022-09-17_15.27.00](./Live Activities.assets/iShot_2022-09-17_15.27.00.gif)
 
-
+![iShot_2022-09-17_15.27.00.gif](http://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/23155131b5134d988b9a963b425b54c2~tplv-k3u1fbpfcp-watermark.image?)
 
 启动多个实时活动：
 
-![iShot_2022-09-17_15.29.08](./Live Activities.assets/iShot_2022-09-17_15.29.08.gif)
-
-
+![iShot_2022-09-17_15.29.08.gif](http://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/ab1e7e22d565458ea4c99a416f1cb370~tplv-k3u1fbpfcp-watermark.image?)
 
 ### 更新实时活动
 
@@ -439,28 +411,26 @@ Button("Update!") {
 }
 ```
 
-
-
 在点击“Update!”的 5 秒后，配送员和时间都发生了改变，同时有录屏无法很好表现的提醒效果：
 
-![iShot_2022-09-17_15.43.29](./Live Activities.assets/iShot_2022-09-17_15.43.29.gif)
+
+![iShot_2022-09-17_15.43.29.gif](http://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3a8f32ac0961483abe028dc72e254efc~tplv-k3u1fbpfcp-watermark.image?)
 
 > 在 Apple Watch 上，系统使用提醒的标题和正文。在 iPhone 上，系统不会显示常规提醒，而是显示灵动岛中展开的实时活动。 在不支持灵动岛的设备上，系统会在主屏幕上显示一个横幅，该横幅使用 App 的实时活动的扩展视图。
-
-
 
 ### 带有动画的内容更新
 
 当我们定义实时活动的界面时，系统会忽略任何动画修饰符——例如，`withAnimation(_:_:)` 和 `animation(_:value:)`——并改用系统的动画时间。但当实时活动的动态内容发生变化时，系统会执行一些动画。
 
 - 文本视图通过模糊的内容过渡动画展示内容变化，并且系统为图像和 SF Symbols 做动画的内容过渡。
+
 - 如果开发者根据内容或状态更改用户界面，进行添加或删除视图，视图会淡入淡出。
+
 - 可以使用以下视图转换来配置这些内置转换：[`opacity`](https://developer.apple.com/documentation/SwiftUI/AnyTransition/opacity ) 、[`move(edge:)`](https://developer.apple.com/documentation/SwiftUI/AnyTransition/move(edge:))、 [`slide`](https://developer.apple.com/documentation/SwiftUI/AnyTransition/slide)、[`push(from:)`](https://developer.apple.com/documentation/SwiftUI/AnyTransition/push(from:))
+
 - 使用 [`numericText(countsDown:) `](https://developer.apple.com/documentation/SwiftUI/ContentTransition/numericText(countsDown:)) 实现计时效果的文本。
 
 > 在配备 Always On Retina 显示屏的设备上，为例保持 Always On 时的电量，系统不会执行动画。可以在动画内容更改之前使用 SwiftUI 的 `isLuminanceReduced` 环境值来检测是否开启 Always On。
-
-
 
 ### 在 App 中结束实时活动
 
@@ -482,20 +452,15 @@ Button("I do not want it!!") {
 }
 ```
 
-
-
 上面的示例使用默认解除策略。因此，实时活动结束后会在锁定屏幕上显示一段时间，以便用户浏览手机以查看最新信息。用户可以随时选择移除实时活动，或者系统在活动结束四小时后自动移除。要立即删除锁定屏幕的结束实时活动，请使用 [`.immediate`](https://developer.apple.com/documentation/activitykit/activityuidismissalpolicy/immediate)。或者，使用[ `after(_:)` ](https://developer.apple.com/documentation/activitykit/activityuidismissalpolicy/after(_:))指定四小时内的日期。
 
 用户可以随时从锁定屏幕中删除 App 的实时活动。这只会结束 App 的实时活动的展示，但不会结束或取消用户启动实时活动的操作。例如用户可以从锁定屏幕中删除他们的披萨外卖的实时活动，但这不会取消披萨订单。
 
 当用户或系统移除实时活动时，`ActivityState` 更改为 [`ActivityState.dismissed`](https://developer.apple.com/documentation/activitykit/activitystate/dismissed)。
 
-
-
 ### 使用远程推送通知更新或结束实时活动
+
 除了使用 ActivityKit 从 App 更新和结束实时活动之外，我们还可以使用从服务器发送到 Apple 推送通知服务 (APN) 的远程推送通知更新或结束实时活动。 要了解有关使用远程推送通知更新实时活动的更多信息，请参阅 [Updating and ending your Live Activity with remote push notifications](https://developer.apple.com/documentation/activitykit/update-and-end-your-live-activity-with-remote-push-notifications)。
-
-
 
 ### 跟踪更新
 
@@ -508,8 +473,8 @@ Button("I do not want it!!") {
 - 要观察实时活动的 Push token 的变化，使用 [`pushTokenUpdates`](https://developer.apple.com/documentation/activitykit/activity/pushtokenupdates-swift.property)。
 
 
-
 ### 获取实时活动列表
+
 一个 App 可以启动多个实时活动。例如，体育应用程序可能允许用户为他们感兴趣的每个现场体育比赛启动一个 实时活动。如果 App 启动多个实时活动，请使用 [`activityUpdates`](https://developer.apple.com/documentation/activitykit/activity/activityupdates-swift.type.property) 函数获取有关 App 正在进行的活动的通知。跟踪正在进行的实时活动以确保 App 的数据与 ActivityKit 跟踪的正在运行的实时活动同步。
 
 以下代码段显示了披萨外卖如何检索正在进行的活动列表：
@@ -520,7 +485,6 @@ for await activity in Activity<PizzaDeliveryAttributes>.activityUpdates {
     print("Pizza delivery details: \(activity.attributes)")
 }
 ```
-
 
 
 获取所有活跃的实时活动列表的另一个方案是开发者手动维护正在进行的实时活动数据，并确保开发者不会让任何活动运行超过需要的时间。例如系统可能会停止我们的 App，或者我们的 App 可能会在实时活动处于活跃状态时崩溃。当应用下次启动时，检查是否有任何实时活动仍然处于活跃状态，更新存储的实时活动列表数据，并结束任何不再相关的实时活动。
