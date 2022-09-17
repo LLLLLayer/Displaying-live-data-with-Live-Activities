@@ -1,6 +1,6 @@
 # 实时活动(Live Activity) - 在锁定屏幕和灵动岛上显示应用程序的实时数据
 
-> 本文参考、翻译并实现 [Apple‘s documentation activitykit displaying live data with live activities](https://developer.apple.com/news/?id=ttuz9vwq) 内容，文章涉及的项目代码可以从[这里](https://github.com/LLLLLayer/Displaying-live-data-with-Live-Activities)获取。
+> 本文参考、翻译并实现 [Apple‘s documentation activitykit displaying live data with live activities](https://developer.apple.com/news/?id=ttuz9vwq) 及 [Updating and ending your Live Activity with remote push notifications](https://developer.apple.com/documentation/activitykit/update-and-end-your-live-activity-with-remote-push-notifications) 内容，文章涉及的项目代码可以从[这里](https://github.com/LLLLLayer/Displaying-live-data-with-Live-Activities)获取。
 
 ## 概述
 
@@ -12,6 +12,9 @@
 
 
 ## 实时活动要求或限制
+
+- **时间**
+
 时活动还会一直保留在锁定屏幕上，直到用户主动将其移除，或交由系统在四小时后将其移除。**即实时活动会灵动上岛最多保留八小时，在锁定屏幕上最多保留十二小时**。
 
 - **更新**
@@ -369,9 +372,7 @@ struct ContentView: View {
                 let activityAttributes = PizzaDeliveryAttributes(numberOfPizzas: 3, totalAmount: "$66.66", orderNumber: "12345")
                 do {
                     deliveryActivity = try Activity.request(attributes: activityAttributes, contentState: initialContentState)
-                    print("Requested a pizza delivery Live Activity \(String(describing: deliveryActivity?.id ?? "nil")).")
                 } catch (let error) {
-                    print("Error requesting pizza delivery Live Activity \(error.localizedDescription).")
                 }
             }
         }
@@ -488,3 +489,68 @@ for await activity in Activity<PizzaDeliveryAttributes>.activityUpdates {
 
 
 获取所有活跃的实时活动列表的另一个方案是开发者手动维护正在进行的实时活动数据，并确保开发者不会让任何活动运行超过需要的时间。例如系统可能会停止我们的 App，或者我们的 App 可能会在实时活动处于活跃状态时崩溃。当应用下次启动时，检查是否有任何实时活动仍然处于活跃状态，更新存储的实时活动列表数据，并结束任何不再相关的实时活动。
+
+## 使用远程推送通知更新实时活动
+
+ActivityKit 向我们提供了从 App 启动、更新和结束实时活动的功能。 此外，它还提供接收 Push token 的功能，开发者可以使用远程推送通知来更新 App 的实时活动，这些远程推送通知从开发者的服务器发送到 Apple 推送通知服务 (APNs)。
+
+
+
+### 查看 User Notification 文档
+接收远程推送通知更新实时活动，类似于我们使用常规的通知推送方式。我们使用  User Notifications 来请求使用通知权限，并且必须设置远程通知服务器。对于实时活动，此任务与在用户设备上显示普通通知的远程推送通知相同。
+
+如果我们不熟悉远程推送通知，请查看 [User Notifications](https://developer.apple.com/documentation/usernotifications) 框架的文档。 确保阅读了[Registering Your App with APNs](https://developer.apple.com/documentation/usernotifications/registering_your_app_with_apns) 和 [Asking Permission to Use Notifications](https://developer.apple.com/documentation/usernotifications/asking_permission_to_use_notifications)。
+
+> 要使用远程推送通知来更新 App 的实时活动，我们需要使用 Push token 通过 APNs 进行身份验证，如 [Establishing a Token-Based Connection to APNs ](https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/establishing_a_token-based_connection_to_apns)中所述。
+
+> 了解推送的更多信息，欢迎查看笔者的另一篇文章 [朴实 Push 普识——了解 Push Notifications 全貌](https://tech.bytedance.net/articles/7104960431508488199)。
+
+
+
+### 更新 App 代码并创建 Push Notification Server
+
+在我们的 Xcode 项目中，首先将推送通知功能添加到 App 中，如使用 APNs 注册我们的应用程序中所述，但不要使用 [`registerForRemoteNotifications()`](https://developer.apple.com/documentation/uikit/uiapplication/1623078-registerforremotenotifications) 为远程推送通知注册实时活动。请使用 ActivityKit  获取 Push token 。
+
+要使用推送通知更新或结束实时活动：
+
+1. 如果我们尚未实现远程推送通知服务器，请创建一个使用 APNs 发送远程推送通知的服务器应用程序。
+2. 在我们的 App 中启动实时活动，并确保将 pushType 参数传递给 [`request(attributes:contentState:pushType:)`](https://developer.apple.com/documentation/activitykit/activity/request(attributes:contentstate:pushtype:)) 函数。
+3. 成功启动实时活动后，我们会收到一个带有 `pushToken` 的 Activity 对象。将其发送到我们的推送通知服务器，并使用它来发送更新或结束实时活动的远程推送通知。
+4. 使用你存储在服务器上的 pushToken 向实时活动发送推送通知。我们必须设置 `content-state` key 以匹配自定义的 `Activity.ContentState` 类型，以确保系统可以解码 JSON 有效负载并更新实时活动。
+5. 将我们发送给 APNs 的请求的 `apns-push-type` 标头字段的值设置为 `liveactivity`。
+6. 使用以下格式设置我们发送到 APNs 的请求的 `apns-topic` 标头字段：`<your bundleID>.push-type.liveactivity`。
+7. 要更新实时活动，请将有效负载的 event key 的值设置为 update。要结束实时活动，请将其设置为 end。如果我们结束实时活动，请包含最终 content-sate，以确保实时活动在结束后显示最新数据。
+8. 使用 [`pushTokenUpdates`](https://developer.apple.com/documentation/activitykit/activity/pushtokenupdates-swift.property) 观察 Push token 的更改，将任何新推送令牌发送到我们的服务器，并使服务器上的旧令牌无效。
+9. 当我们的实时活动结束时，使服务器上的  Push token 无效。
+
+> 要在模拟器中测试实时活动的远程推送通知，请使用配备 [Apple T2 安全芯片](https://support.apple.com/en-us/HT208862)的 Mac 或配备运行 macOS 13 或更高版本的 [Apple 芯片的 Mac](https://support.apple.com/en-us/HT211814)。
+
+
+以下有效负载会更新比萨配送的司机姓名和配送时间。` content-state` 的内容必须与我们在 `ActivityAttributes` 实现中声明的自定义 `Activity.ContentState` 类型的属性相匹配。 
+
+在以下示例中，`content-state` 与使用实时活动显示实时数据中的示例中的自定义 `PizzaDeliveryStatus` 类型的属性相匹配。 此外，示例有效负载包括一个 alert，让用户知道更新的实时活动内容：
+
+```JSON
+{
+    "aps": {
+        "timestamp": 1168364460,
+        "event": "update",
+        "content-state": {
+            "driverName": "Anne Johnson",
+            "estimatedDeliveryTime": 1659416400
+        },
+        "alert": {
+            "title": "Delivery Update",
+            "body": "Your pizza order will arrive soon.",
+            "sound": "example.aiff" 
+        }
+    }
+}
+```
+
+
+请注意， sound 不是必须提供的。上面的示例为保持简单，没有使用本地化字的符串作为 alert title 和 body。在我们 App 的警报实现中，请考虑本地化这两个字符串。有关显示远程通知警报的更多信息，请参阅 [Generating a remote notification](https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/generating_a_remote_notification)。
+
+需要注意的是，用户的设备可能不会收到远程推送通知，例如用户没有网络连接。同样，如果推送通知在实时活动结束后到达，系统也会忽略它。这两种情况都可能导致实时活动显示过时的信息。为了帮助减少显示过时信息的机会，除了使用远程推送通知之外，还可以从 App 更新我们的实时活动。
+
+该系统允许**每小时有一定的通知预算**，以允许频繁更新——例如现场体育比赛。但是，如果我们超出预算，系统可能会限制推送通知。为避免超出每小时通知预算，我们可以发送不计入预算的低优先级推送通知。
