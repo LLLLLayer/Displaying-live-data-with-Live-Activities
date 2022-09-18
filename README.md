@@ -1,6 +1,9 @@
-# 实时活动(Live Activity) - 在锁定屏幕和灵动岛上显示应用程序的实时数据
+# [实时活动(Live Activity) - 在锁定屏幕和灵动岛上显示应用程序的实时数据](https://juejin.cn/post/7144268555779850248)
 
 > 本文参考、翻译并实现 [Apple‘s documentation activitykit displaying live data with live activities](https://developer.apple.com/news/?id=ttuz9vwq) 及 [Updating and ending your Live Activity with remote push notifications](https://developer.apple.com/documentation/activitykit/update-and-end-your-live-activity-with-remote-push-notifications) 内容，文章涉及的项目代码可以从[这里](https://github.com/LLLLLayer/Displaying-live-data-with-Live-Activities)获取。
+
+
+![iShot_2022-09-19_01.42.20.gif](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/f9f88ef61de649d1808fe0da472d9794~tplv-k3u1fbpfcp-watermark.image?)
 
 ## 概述
 
@@ -554,3 +557,19 @@ ActivityKit 向我们提供了从 App 启动、更新和结束实时活动的功
 需要注意的是，用户的设备可能不会收到远程推送通知，例如用户没有网络连接。同样，如果推送通知在实时活动结束后到达，系统也会忽略它。这两种情况都可能导致实时活动显示过时的信息。为了帮助减少显示过时信息的机会，除了使用远程推送通知之外，还可以从 App 更新我们的实时活动。
 
 该系统允许**每小时有一定的通知预算**，以允许频繁更新——例如现场体育比赛。但是，如果我们超出预算，系统可能会限制推送通知。为避免超出每小时通知预算，我们可以发送不计入预算的低优先级推送通知。
+
+
+## 一个语音通话的 Demo
+
+如果你对以下 Demo 感兴趣，同样可以参考[这里](https://github.com/LLLLLayer/Displaying-live-data-with-Live-Activities)。
+
+ ![2.gif](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/43170c1775d44956a98c081e3991c2db~tplv-k3u1fbpfcp-watermark.image?) | ![1.gif](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/517e78269f86453f8cf23acf971b7265~tplv-k3u1fbpfcp-watermark.image?) | ![3.gif](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/98752c9e26cd4579987116d54005447e~tplv-k3u1fbpfcp-watermark.image?)|
+| :------------: | :------: | :------: |
+| 语音通话 App 灵动岛 | 多灵动岛 | 锁屏 |
+
+
+
+
+
+
+
